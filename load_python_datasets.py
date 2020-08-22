@@ -1,4 +1,4 @@
-def load_expr_mat(use_expr, project_root_dir='/home/chihchung/GoogleDrive/ppi', transformation=None):
+def load_expr_mat(use_expr, project_root_dir='~/', transformation=None):
     """
     :param use_expr: 'SC_tpm', 'SC_counts', 'ROSMAP_fpkm', 'MSBB_normExp'
     :param project_root_dir:
