@@ -1,13 +1,12 @@
-# =============================================================================
 import networkx as nx
 from tqdm import tqdm
 
-def read_network(network_file, delim = ','):
-    # todo: add weighted network
+
+def read_network(network_file, delim=',', weighted=False) -> nx.Graph:
     """
     Reads a network from an external file.
 
-    * The edgelist must be provided as a tab-separated table. The
+    * The edgelist must be provided as a delim-separated table. The
     first two columns of the table will be interpreted as an
     interaction gene1 <==> gene2
 
@@ -19,7 +18,7 @@ def read_network(network_file, delim = ','):
         handler = gzip.open(network_file, 'r')
     else:
         handler = open(network_file, 'r')
-    next(handler) ## skep header
+    next(handler)  ## skep header
 
     for line in tqdm(handler):
         if type(line) is not str:
@@ -32,7 +31,11 @@ def read_network(network_file, delim = ','):
         line_data = line.strip().split(delim)
         node1 = line_data[0].strip('"')
         node2 = line_data[1].strip('"')
-        G.add_edge(node1, node2)
+        if weighted:
+            weight = float(line_data[2].strip('"'))
+            G.add_edge(node1, node2, weight=weight)
+        else:
+            G.add_edge(node1, node2)
 
     print("\n> done loading network:")
     print("> network contains %s nodes and %s links" % (G.number_of_nodes(),
