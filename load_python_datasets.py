@@ -1,4 +1,4 @@
-def load_expr_mat(use_expr, project_root_dir='~/', transformation=None):
+def load_expr_mat(use_expr, project_root_dir='./', transformation=None):
     """
     :param use_expr: 'SC_tpm', 'SC_counts', 'ROSMAP_fpkm', 'MSBB_normExp'
     :param project_root_dir:
@@ -22,19 +22,31 @@ def load_expr_mat(use_expr, project_root_dir='~/', transformation=None):
         expr_mat = pd.read_feather('%s/databases/2019_AD_MSBB/AD_MSBB_scaleExp.feather' % project_root_dir).set_index(
             'geneSymbol')
     else:
-        expr_mat = pd.read_feather('%s/%s' % (project_root_dir, use_expr)).set_index(
+        if use_expr.endswith('.feather'):
+            expr_mat = pd.read_feather('%s/%s' % (project_root_dir, use_expr)).set_index(
             'geneSymbol')
+        elif use_expr.endswith('.tsv.gz'):
+            expr_mat = pd.read_csv('%s/%s' % (project_root_dir, use_expr), sep='\t').set_index(
+                'geneSymbol')
+        elif use_expr.endswith('.csv.gz'):
+            expr_mat = pd.read_csv('%s/%s' % (project_root_dir, use_expr)).set_index(
+                'geneSymbol')
+        else:
+            raise KeyError
         # raise KeyError
 
     if transformation is not None:
         if transformation == 'log':
-            expr_mat = np.log(1 + expr_mat)
+            expr_mat = np.log1p(expr_mat)
         elif transformation == 'sigmoid':
             from scipy import stats, special
             expr_mat = special.expit(expr_mat.apply(stats.zscore))
         elif transformation == 'log_sigmoid':
             from scipy import stats, special
-            expr_mat = special.expit(np.log(1 + expr_mat).apply(stats.zscore))
+            expr_mat = special.expit(np.log1p(expr_mat).apply(stats.zscore))
+        elif transformation == 'z_score_only':
+            from scipy import stats
+            expr_mat = expr_mat.apply(stats.zscore)
         else:
             raise KeyError
 
