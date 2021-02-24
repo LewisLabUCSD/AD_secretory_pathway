@@ -7,45 +7,6 @@ import networkx as nx
 from tqdm import tqdm
 
 
-def read_network(network_file, delim=','):
-    # todo: add weighted network
-    """
-    Reads a network from an external file.
-
-    * The edgelist must be provided as a delim-separated table. The
-    first two columns of the table will be interpreted as an
-    interaction gene1 <==> gene2
-
-    * Lines that start with '#' will be ignored
-    """
-    G = nx.Graph()
-    if network_file.endswith('.gz'):
-        import gzip
-        handler = gzip.open(network_file, 'r')
-    else:
-        handler = open(network_file, 'r')
-    next(handler) ## skep header
-
-    for line in tqdm(handler):
-        if type(line) is not str:
-            line = line.decode('utf-8')
-        # lines starting with '#' will be ignored
-        if line[0] == '#':
-            continue
-        # The first two columns in the line will be interpreted as an
-        # interaction gene1 <=> gene2
-        line_data = line.strip().split(delim)
-        node1 = line_data[0].strip('"')
-        node2 = line_data[1].strip('"')
-        G.add_edge(node1, node2)
-
-    print("\n> done loading network:")
-    print("> network contains %s nodes and %s links" % (G.number_of_nodes(),
-                                                        G.number_of_edges()))
-
-    return G
-
-
 def RWR_torch(p0, G, expr, n_prop, a_prop, mask_on=[], mask_transparancy=0, add_loop=True,
               gradient: list = None, calculate_stationary=False,
               device=torch.device('cpu')):
@@ -289,7 +250,7 @@ class RwrNode:
                                  gradient=None, device=torch.device(self.device), mask_on=mask_on,
                                  mask_transparancy=None, add_loop=add_loop, calculate_stationary=calculate_stationary)
 
-            elif vt_jacobian_nodes is 'secMs':
+            elif vt_jacobian_nodes == 'secMs':
                 vt_jacobian_nodes = self.secMs
 
             grad_one_hot = np.zeros(len(self.G))
@@ -320,11 +281,12 @@ class RwrNode:
     def p_arwr(self, secP_secM_expr: dict,
                n_prop: int = 20, a_prop: float = .1,
                mask_on=[], mask_transparancy=.00001, summarization=False,
-               vt_jacobian_nodes='secMs', calculate_stationary=False):
+               vt_jacobian_nodes=None, calculate_stationary=False):
 
         """
         wrapper for expression guided random walk and gradient calculation
 
+        :param vt_jacobian_nodes: set to None to disable gradient calculation, 'secMs' to calculate grad w.r.t secMs or a list of custome gene set
         :param a:
         :param secP_secM_expr:
         :param mask_on:
@@ -443,118 +405,3 @@ def p_arwr(a: RwrNode, secP_secM_expr: dict,
         return p_k_dict
     except RuntimeError as e:
         raise
-
-
-if __name__ == "__main__":
-    from multiprocessing import Pool
-    from functools import partial
-    import socket
-    import feather
-    import pickle
-
-    if socket.gethostname().startswith('chihchung-HP'):
-        project_root_dir = '/home/chihchung/GoogleDrive/ppi'
-        torch.set_num_threads(32)
-        device = 'cuda'
-    elif socket.gethostname().startswith('Chihchungs-MacBook-Pro'):
-        project_root_dir = '/Volumes/GoogleDrive/My Drive/ppi'
-        device = 'cpu'
-    else:  # colab
-        project_root_dir = '/root/GoogleDrive/My Drive/ppi'
-        device = 'cuda'
-
-    # G = read_network('%s/databases/networks/int.db.allfiltered.csv.gz' % project_root_dir)
-    G = pickle.load(open('%s/databases/networks/int.db.PCNet.G.p' % project_root_dir, 'rb'))
-    # ['ABCC8' in x for x in [list(G.neighbors('MAPT')), list(G.neighbors('APP'))]]
-
-    # secP_secM_expr = feather.read_dataframe(
-    #     '%s/python/data/deep_proteome_median/predicted.secP.HPA.feather' % project_root_dir)
-    secMs = feather.read_dataframe(
-        '%s/python/data/deep_proteome_median/secM.components.feather' % project_root_dir).iloc[:, 0].to_list()
-    secPs = feather.read_dataframe(
-        '%s/python/data/deep_proteome_median/secP.components.feather' % project_root_dir).iloc[:, 0].to_list()
-    sec_resident = feather.read_dataframe(
-        '%s/python/data/deep_proteome_median/all.secretory.resident.genes.feather' % project_root_dir).iloc[:,
-                   0].to_list()
-
-    APP_pathway_genes = pd.read_csv('%s/databases/2019_AD_GWAS/APP_pathway.csv' % project_root_dir)['Gene'].to_list()
-    AD_risk_genes = pd.read_csv('%s/databases/2019_AD_GWAS/AD_risk_genes.csv' % project_root_dir)[
-        'AD_risk_genes'].to_list()
-    # secMs = list(set(secMs + APP_pathway_genes_df['Gene'].to_list()))
-    # sec_resident = list(set(sec_resident + APP_pathway_genes_df['Gene'].to_list()))
-
-    # candidateSecPs = ['APP', 'MAPT']
-    candidateSecPs = ['APP',  # 'MAPT',
-                      'ADAM10',  # 'ADAM10', 'ADAM17', 'ADAM19',
-                      'BACE1',  # 'BACE2',
-                      'PSEN1'  # , 'PSEN2', 'NCSTN', 'APH1A'
-                      ]
-
-    # G = G.subgraph(set(candidateSecPs + secMs + sec_resident))
-    # expr_mat = pd.read_csv('%s/output/190908_AD/AD_sc_TPM.csv.gz' % project_root_dir)
-    # expr_mat = pickle.load(open('%s/output/190908_AD/expr_mat_TPM.p' % project_root_dir, 'rb'))
-    # expr_mat = pd.read_feather('%s/databases/2019_AD_singleCell/AD_sc_counts.feather' % project_root_dir).set_index('geneSymbol')
-    expr_mat = pd.read_feather('%s/databases/2019_AD_MSBB/AD_MSBB_sigmoidExp.feather' % project_root_dir).set_index(
-        'geneSymbol')
-    # expr_mat=expr_mat
-    # expr_arr = expr_mat.values
-
-    patient_names = list(expr_mat.columns)
-    patient_ids = range(expr_mat.shape[1])
-    patient_name_dict = dict(zip(patient_ids, patient_names))
-    allGeneSymbols = list(expr_mat.index)
-
-    calculate_grad = False
-
-
-    # expr_arr= stats.zscore(np.log(1+expr_arr))
-    # expr_arr= expit(expr_arr)
-
-    def rwr_run(secP):
-        try:
-            if calculate_grad:
-                other_context_genes = list(
-                    # set(G.nodes) - {secP} - set(secMs) - set(sec_resident)
-                    set(APP_pathway_genes + AD_risk_genes) - {secP} - set(secMs) - set(sec_resident)
-                    # set(secPs) - {secP} - set(secMs) - set(sec_resident)
-
-                )  # list(set(candidateSecPs) - {secP} - set(secMs))
-                a = RwrNode(secp=secP, G=G, secms=secMs, sec_resident=sec_resident,
-                            other_context_genes=other_context_genes)
-                mask_on = [x for x in a.G.nodes if x not in other_context_genes]
-                vt_jacobian_nodes = 'secMs'
-            else:
-                other_context_genes = []
-                a = RwrNode(secp=secP, G=G, secms=secMs, sec_resident=sec_resident,
-                            other_context_genes=other_context_genes)
-                mask_on = []
-                vt_jacobian_nodes = None
-
-
-        except Exception as e:
-            # a = None
-            # continue
-            return None
-
-        res_dict = {}
-        for patient_id in patient_ids:
-            res_dict.update({patient_name_dict[patient_id]:
-                                 a.p_arwr(mask_on=mask_on,
-                                          secP_secM_expr=dict(zip(allGeneSymbols, expr_mat.iloc[:, patient_id])),
-                                          summarization=False,  # 'context_weighted_secM'
-                                          vt_jacobian_nodes=vt_jacobian_nodes, calculate_stationary=True
-                                          )})
-
-        return res_dict
-
-
-    with Pool(1) as p:
-        res = p.map(rwr_run, candidateSecPs)
-
-    res_frame = pd.concat([pd.DataFrame.from_dict({(secP, i, j): res_dict[i][j]
-                                                   for i in res_dict.keys()
-                                                   for j in res_dict[i].keys()},
-                                                  orient='index') for secP, res_dict in zip(candidateSecPs, res) if
-                           res_dict is not None])
-
-    res_frame.to_csv('%s/output/190915_AD_MSBB/RWR_allSecPs_stationary.csv' % project_root_dir)
