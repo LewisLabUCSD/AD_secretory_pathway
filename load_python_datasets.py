@@ -12,14 +12,11 @@ def load_expr_mat(use_expr, project_root_dir='./', transformation=None):
     if use_expr == 'SC_tpm':
         expr_mat = pickle.load(open('%s/output/190908_AD/expr_mat_TPM.p' % project_root_dir, 'rb'))
     elif use_expr == 'SC_counts':
-        expr_mat = pd.read_feather('%s/databases/2019_AD_singleCell/AD_sc_counts.feather' % project_root_dir).set_index(
-            'geneSymbol')
-    elif use_expr == 'ROSMAP_fpkm':
-        expr_mat = pd.read_feather('%s/databases/2019_AD_ROSMAP/AD_ROSMAP_FPKM.feather' % project_root_dir).set_index(
+        expr_mat = pd.read_feather('%s/databases/AD_sc_counts.feather' % project_root_dir).set_index(
             'geneSymbol')
     elif use_expr == 'MSBB_normExp':
         # NormalizedExpression
-        expr_mat = pd.read_feather('%s/databases/2019_AD_MSBB/AD_MSBB_scaleExp.feather' % project_root_dir).set_index(
+        expr_mat = pd.read_feather('%s/databases/AD_MSBB_scaleExp.feather' % project_root_dir).set_index(
             'geneSymbol')
     else:
         if use_expr.endswith('.feather'):
