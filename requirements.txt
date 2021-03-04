@@ -133,7 +133,6 @@ pyarrow                   2.0.0           py38h85297b1_3_cpu    conda-forge
 pycparser                 2.20               pyh9f0ad1d_2    conda-forge
 pygments                  2.7.2                      py_0    conda-forge
 pygpu                     0.7.6            py38heb32a55_0  
-pymc3                     3.8                        py_0  
 pyopenssl                 19.1.0                     py_1    conda-forge
 pyparsing                 2.4.7                      py_0  
 pyrsistent                0.17.3           py38h25fe258_1    conda-forge
@@ -155,7 +154,6 @@ snappy                    1.1.8                he1b5a44_3    conda-forge
 sqlite                    3.33.0               h62c20be_0  
 terminado                 0.9.1            py38h32f6830_1    conda-forge
 testpath                  0.4.4                      py_0    conda-forge
-theano                    1.0.4            py38hfd86e86_0  
 tk                        8.6.10               hbc83047_0  
 tornado                   6.0.4            py38h7b6447c_1  
 tqdm                      4.50.2                     py_0  
